@@ -1,6 +1,10 @@
-// Express Controls EZMultiPli Multi-sensor driver for SmartThings
-// The EZMultiPli is also known as the HSM200 - it's the same device.
-// v0.0.7 - jrs - 02/23/2015 - Improved version by Jim Sulin
+// Express Controls EZMultiPli Multi-sensor 
+// Motion Sensor - Temperature - Light level - 8 Color Indicator LED - Z-Wave Range Extender - Wall Powered
+// driver for SmartThings
+// The EZMultiPli is also known as the HSM200 from HomeSeer.com
+//
+// v0.0.8 - DrZWave 2/25/2015 - change the color control to be tiles since there are only 8 colors.
+// v0.0.7 - jrs - 02/23/2015 - Jim Sulin
 
 metadata {
 	definition (name: "EZmultiPli", namespace: "DrZWave", author: "Eric Ryherd", oauth: true) {
@@ -8,7 +12,7 @@ metadata {
 	capability "Motion Sensor"
 	capability "Temperature Measurement"
 	capability "Illuminance Measurement"
-	capability "Color Control"
+	capability "Color Control" // might want to drop this... TODO - replace it with simple buttons (tiles)?
 	capability "Configuration"
 
 	fingerprint deviceId: "0x0701", inClusters: "0x5E, 0x71, 0x31, 0x33, 0x72, 0x86, 0x59, 0x85, 0x70, 0x77, 0x5A, 0x7A, 0x73, 0xEF, 0x20" 
@@ -79,7 +83,7 @@ metadata {
         input "OnLevel", "number", title: "Dimmer Onlevel", description: "Dimmer OnLevel for associated node 2 lights [0, 1-99, -1]", defaultValue: -1, displayDuringSetup: true, required: false
         input "LiteMin", "number", title: "Luminance Report Frequency", description: "Luminance report sent every N minutes", defaultValue: 60, displayDuringSetup: true, required: false
         input "TempMin", "number", title: "Temperature Report Frequency", description: "Temperature report sent every N minutes", defaultValue: 60, displayDuringSetup: true, required: false
-        input "TempAdj", "number", title: "Temperature Calibration", description: "Adjust temperature up/down N degrees F [(-127)-(+128)]", defaultValue: 0, displayDuringSetup: true, required: false
+        input "TempAdj", "number", title: "Temperature Calibration", description: "Adjust temperature up/down N tenths of a degree F [(-127)-(+128)]", defaultValue: 0, displayDuringSetup: true, required: false
   }
 
 } // end metadata
@@ -232,6 +236,9 @@ def zwaveEvent(physicalgraph.zwave.Command cmd) {
 
 // ensure we are passing acceptable param values for LiteMin & TempMin configs
 def checkLiteTempInput(value) {
+	if (value == null) {
+    	value=60
+    }
     def liteTempVal = value.toInteger()
     switch (liteTempVal) {
       case { it < 0 }:
@@ -247,6 +254,9 @@ def checkLiteTempInput(value) {
 
 // ensure we are passing acceptable param value for OnTime config
 def checkOnTimeInput(value) {
+	if (value == null) {
+    	value=10
+    }
     def onTimeVal = value.toInteger()
     switch (onTimeVal) {
       case { it < 0 }:
@@ -262,6 +272,9 @@ def checkOnTimeInput(value) {
 
 // ensure we are passing acceptable param value for OnLevel config
 def checkOnLevelInput(value) {
+	if (value == null) {
+    	value=99
+    }  
     def onLevelVal = value.toInteger()
     switch (onLevelVal) {
       case { it < -1 }:
@@ -278,7 +291,10 @@ def checkOnLevelInput(value) {
 
 // ensure we are passing an acceptable param value for TempAdj configs
 def checkTempAdjInput(value) {
-    def tempAdjVal = value.toInteger()
+	if (value == null) {
+    	value=0
+    }
+	def tempAdjVal = value.toInteger()
     switch (tempAdjVal) {
       case { it < -127 }:
         return 0			// bad value, set to default
@@ -293,6 +309,7 @@ def checkTempAdjInput(value) {
 
 
 def configure() {
+	log.debug "OnTime=${settings.OnTime} OnLevel=${settings.OnLevel}"
 	def cmd = delayBetween([
 		zwave.configurationV1.configurationSet(parameterNumber: 1, size: 1, configurationValue: [checkOnTimeInput(settings.OnTime)]).format(),
 		zwave.configurationV1.configurationSet(parameterNumber: 2, size: 1, configurationValue: [checkOnLevelInput(settings.OnLevel)]).format(),
