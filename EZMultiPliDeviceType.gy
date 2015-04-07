@@ -3,6 +3,7 @@
 // driver for SmartThings
 // The EZMultiPli is also known as the HSM200 from HomeSeer.com
 //
+// v0.0.9 - jrs - got the temp and luminance to work. Motion works. Debugging the color wheel.
 // v0.0.8 - DrZWave 2/25/2015 - change the color control to be tiles since there are only 8 colors.
 // v0.0.7 - jrs - 02/23/2015 - Jim Sulin
 
@@ -14,6 +15,8 @@ metadata {
 	capability "Illuminance Measurement"
 	capability "Color Control" // might want to drop this... TODO - replace it with simple buttons (tiles)?
 	capability "Configuration"
+// jrs 04/07/2015
+    command "setAdjustedColor"
 
 	fingerprint deviceId: "0x0701", inClusters: "0x5E, 0x71, 0x31, 0x33, 0x72, 0x86, 0x59, 0x85, 0x70, 0x77, 0x5A, 0x7A, 0x73, 0xEF, 0x20" 
 	} // end definition
@@ -31,6 +34,10 @@ metadata {
 			status "luminance ${i} %": new physicalgraph.zwave.Zwave().sensorMultilevelV5.sensorMultilevelReport(
 				scaledSensorValue: i, precision: 0, sensorType: 3).incomingMessage()
 		}
+// jrs 04/07/2015
+		controlTile("rgbSelector", "device.color", "color", height: 3, width: 3, inactiveLabel: false) {
+		            state "color", action:"setAdjustedColor"
+	    }
 
 	} //end simulator
 
@@ -40,13 +47,17 @@ metadata {
 			state "inactive", label:'no motion', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff"
 		}
 		standardTile("switch", "device.switch", canChangeIcon: true) {
-			state "on", label:'${name}', action:"switch.off", icon:"st.switches.switch.on", backgroundColor:"#79b821", nextState:"turningOff"
-			state "off", label:'${name}', action:"switch.on", icon:"st.switches.switch.off", backgroundColor:"#ffffff", nextState:"turningOn"
-			state "turningOn", label:'${name}', icon:"st.switches.switch.on", backgroundColor:"#79b821"
-			state "turningOff", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff"
+//			state "on", label:'${name}', action:"switch.off", icon:"st.switches.switch.on", backgroundColor:"#79b821", nextState:"turningOff"
+//			state "off", label:'${name}', action:"switch.on", icon:"st.switches.switch.off", backgroundColor:"#ffffff", nextState:"turningOn"
+//			state "turningOn", label:'${name}', icon:"st.switches.switch.on", backgroundColor:"#79b821"
+//			state "turningOff", label:'${name}', icon:"st.switches.switch.off", backgroundColor:"#ffffff"
+			state "on", label:'${name}', action:"switch.off", icon:"st.lights.philips.hue-single", backgroundColor:"#79b821"
+			state "off", label:'${name}', action:"switch.on", icon:"st.lights.philips.hue-single", backgroundColor:"#ffffff"
 		}
 		valueTile("temperature", "device.temperature", inactiveLabel: false) {
-			state "temperature", label:'${currentValue}° ${unit}',
+// jrs 4/7/2015 - Null on display
+//            state "temperature", label:'${currentValue}° ${unit}',
+			state "temperature", label:'Temp\n ${currentValue}°', unit:"F",
 			backgroundColors:[
 				[value: 31, color: "#153591"],
 				[value: 44, color: "#1e9cbb"],
@@ -58,7 +69,9 @@ metadata {
 			]
 		}
 		valueTile("illuminance", "device.illuminance", inactiveLabel: false) {
-			state "luminosity", label:'${currentValue} ${unit}'
+// jrs 4/7/2015 - Null on display
+//			state "luminosity", label:'${currentValue} ${unit}'
+			state "luminosity", label:'Luminosity\n ${currentValue}%', unit:"%",
 			backgroundColors:[
 				[value: 25, color: "#404040"],
 				[value: 50, color: "#808080"],
@@ -66,9 +79,14 @@ metadata {
 				[value: 90, color: "#f0f0f0"]
 			]
 		}
+// jrs 4/7/2015 
 		controlTile("rgbSelector", "device.color", "color", height: 3, width: 3, inactiveLabel: false) {
 			state "color", action:"color control.setColor"
 		}
+//		controlTile("rgbSelector", "device.color", "color", height: 3, width: 3, inactiveLabel: false) {
+//			state "color", action:"setAdjustedColor"
+//		}
+
 		standardTile("configure", "device.configure", inactiveLabel: false, decoration: "flat") {
 			state "configure", label:'', action:"configuration.configure", icon:"st.secondary.configure"
 		}
@@ -165,6 +183,43 @@ def off() {
 	], 500)
 }
 
+
+/**
+def on() {
+	parent.on(this)
+	sendEvent(name: "switch", value: "on")
+}
+
+def off() {
+	parent.off(this)
+	sendEvent(name: "switch", value: "off")
+}
+
+
+def setColor(value) {
+	log.debug "setColor: ${value}, $this"
+//	parent.setColor(this, value)
+//	parent.setColor(this, value)
+//	if (value.hue) { sendEvent(name: "hue", value: value.hue)}
+//	if (value.saturation) { sendEvent(name: "saturation", value: value.saturation)}
+	if (value.hex) { sendEvent(name: "color", value: value.hex)}
+//	if (value.level) { sendEvent(name: "level", value: value.level)}
+	if (value.switch) { sendEvent(name: "switch", value: value.switch)}
+}
+**/
+def setAdjustedColor(value) {
+	if (value) {
+        log.debug "setAdjustedColor: ${value}"
+        def adjusted = value + [:]
+//        adjusted.hue = adjustOutgoingHue(value.hue)
+        // Needed because color picker always sends 100
+        adjusted.level = null 
+        log.debug "adjusted= ${adjusted}"
+        setColor(adjusted)
+    }
+}
+
+
 def setColor(value) {
     log.debug "setColor() : ${value}"
     def cmds = []
@@ -227,6 +282,7 @@ def setColor(value) {
 
 	delayBetween(cmds, 100)
 }
+
 
 
 def zwaveEvent(physicalgraph.zwave.Command cmd) {
