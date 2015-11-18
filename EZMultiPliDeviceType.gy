@@ -3,6 +3,7 @@
 // driver for SmartThings
 // The EZMultiPli is also known as the HSM200 from HomeSeer.com
 //
+// 2015-11-18 - erocm1231 - Added to setColor for compatibility with Smart Lighting
 // v0.1.0 - DrZWave - chose better icons, Got color LED to work - first fully functional version
 // v0.0.9 - jrs - got the temp and luminance to work. Motion works. Debugging the color wheel.
 // v0.0.8 - DrZWave 2/25/2015 - change the color control to be tiles since there are only 8 colors.
