@@ -179,10 +179,72 @@ def off() {
 
 def setColor(value) {
     log.debug "setColor() : ${value} and red value is= ${value.red}"
+    def myred
+    def mygreen
+    def myblue
     def cmds = []
-    def myred=value.red >128 ? 255 : 0	// the EZMultiPli has just on/off for each of the 3 channels RGB so convert the 0-255 value into 0 or 255.
-    def mygreen=value.green >128 ? 255 : 0
-    def myblue=value.blue>128 ? 255 : 0
+    if ( value.level > 1 ) {
+    	switch ( value.saturation ) {
+        	case 56: case 19: case 91: case 80:
+            	log.debug "Color: Yellow"
+                myred = 255
+                mygreen = 255
+                myblue = 255
+            break
+            case 100:
+            	switch (value.hue) {
+                	case 100:
+                    	log.debug "Color: Red"
+                        myred = 255
+                        mygreen = 0
+                        myblue = 0
+                    break
+                    case 39:
+                    	log.debug "Color: Green"
+                        myred = 0
+                        mygreen = 255
+                        myblue = 0
+                    break
+                    case 70:
+                    	log.debug "Color: Blue"
+                        myred = 0
+                        mygreen = 0
+                        myblue = 255
+                    break
+                    case 25:
+                    	log.debug "Color: Yellow"
+                        myred = 255
+                        mygreen = 255
+                        myblue = 255
+                    break
+                    case 10:
+                    	log.debug "Color: Orange"
+                        myred = 255
+                        mygreen = 255
+                        myblue = 0
+                    break
+                    case 75:
+                    	log.debug "Color: Purple"
+                        myred = 255
+                        mygreen = 0
+                        myblue = 255
+                    break
+                    case 83:
+                    	log.debug "Color: Pink"
+                        myred = 255
+                        mygreen = 0
+                        myblue = 0
+                    break
+            	}
+            break
+        }
+    }
+    else {
+        myred=value.red >128 ? 255 : 0	// the EZMultiPli has just on/off for each of the 3 channels RGB so convert the 0-255 value into 0 or 255.
+        mygreen=value.green >128 ? 255 : 0
+        myblue=value.blue>128 ? 255 : 0
+    }
+    log.debug "Red: ${myred} Green: ${mygreen} Blue: ${myblue}"
 //			 cmds << zwave.colorControlV1.stateSet(stateDataLength: 3, VariantGroup1: [0x02, myred], VariantGroup2:[ 0x03, mygreen], VariantGroup3:[0x04,myblue]).format() // ST support for this command as of 2015/02/23 does not support the color IDs so this command cannot be used.
 // So instead we'll use these commands to hack around the lack of support of the above command
 	cmds << zwave.basicV1.basicSet(value: 0x00).format() // As of 2015/02/23 ST is not supporting stateSet properly but found this hack that works. 
