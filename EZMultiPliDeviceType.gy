@@ -3,6 +3,7 @@
 // driver for SmartThings
 // The EZMultiPli is also known as the HSM200 from HomeSeer.com
 //
+// 2015-11-19 - Fixed a couple incorrect colors
 // 2015-11-18 - erocm1231 - Added to setColor for compatibility with Smart Lighting
 // v0.1.0 - DrZWave - chose better icons, Got color LED to work - first fully functional version
 // v0.0.9 - jrs - got the temp and luminance to work. Motion works. Debugging the color wheel.
@@ -186,57 +187,75 @@ def setColor(value) {
     def cmds = []
     if ( value.level > 1 ) {
     	switch ( value.saturation ) {
-        	case 56: case 19: case 91: case 80:
+        	case 56: case 80:
             	log.debug "Color: Yellow"
+                myred = 255
+                mygreen = 255
+                myblue = 0
+            break
+            case 19: case 91: 
+            	log.debug "Color: White"
                 myred = 255
                 mygreen = 255
                 myblue = 255
             break
             case 100:
-            	switch (value.hue) {
-                	case 100:
+                    if ( ( value.hue > 0 && value.hue <= 9 ) || ( value.hue >= 11 && value.hue <= 16 ) ) {
                     	log.debug "Color: Red"
                         myred = 255
                         mygreen = 0
                         myblue = 0
-                    break
-                    case 39:
+                    }
+                    // Had to add this for the Smart Lighting App to use all colors. Selecting Orange
+                    // in Smart Lighting will light up Teal.
+                    else if ( value.hue == 10 ) {
+                    	log.debug "Color: Teal"
+                        myred = 0
+                        mygreen = 255
+                        myblue = 255
+                    }
+                    else if ( value.hue >= 17 && value.hue <= 32 ) {
+                    	log.debug "Color: Yellow"
+                        myred = 255
+                        mygreen = 255
+                        myblue = 0
+                    }
+                    else if ( value.hue >= 33 && value.hue <= 48 ) {
                     	log.debug "Color: Green"
                         myred = 0
                         mygreen = 255
                         myblue = 0
-                    break
-                    case 70:
+                    }
+                    else if ( value.hue >= 49 && value.hue <= 64 ) {
+                    	log.debug "Color: Teal"
+                        myred = 0
+                        mygreen = 255
+                        myblue = 255
+                    }
+                    else if ( value.hue >= 65 && value.hue <= 80 ) {
                     	log.debug "Color: Blue"
                         myred = 0
                         mygreen = 0
                         myblue = 255
-                    break
-                    case 25:
-                    	log.debug "Color: Yellow"
-                        myred = 255
-                        mygreen = 255
-                        myblue = 255
-                    break
-                    case 10:
-                    	log.debug "Color: Orange"
-                        myred = 255
-                        mygreen = 255
-                        myblue = 0
-                    break
-                    case 75:
-                    	log.debug "Color: Purple"
-                        myred = 255
-                        mygreen = 0
-                        myblue = 255
-                    break
-                    case 83:
+                    }
+                    else if ( value.hue >= 81 && value.hue <= 96 ) {
                     	log.debug "Color: Pink"
                         myred = 255
                         mygreen = 0
+                        myblue = 255
+                    }
+                    else if ( value.hue >= 97 && value.hue <= 100 ) {
+                    	log.debug "Color: Red"
+                        myred = 255
+                        mygreen = 0
                         myblue = 0
-                    break
-            	}
+                    }
+            break
+            default:
+                log.debug "Color: White"
+                myred = 255
+                mygreen = 255
+                myblue = 255
             break
         }
     }
