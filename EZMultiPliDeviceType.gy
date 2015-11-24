@@ -122,7 +122,7 @@ def parse(String description){
 	}
     
     def statusTextmsg = ""
-    statusTextmsg = "Temperature is ${device.currentState('temperature').value} °F\nIlluminance is ${device.currentState('illuminance').value}%"
+    statusTextmsg = "Temperature is ${device.currentState('temperature').value} °F\nRelative Luminance is ${device.currentState('illuminance').value}%"
     sendEvent("name":"statusText", "value":statusTextmsg, displayed:false)
     //log.debug statusTextmsg
 
