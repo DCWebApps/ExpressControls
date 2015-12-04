@@ -3,6 +3,7 @@
 // driver for SmartThings
 // The EZMultiPli is also known as the HSM200 from HomeSeer.com
 //
+// 2015-12-04 - erocm1231 - added range value to preferences as suggested by @Dela-Rick.
 // 2015-11-26 - erocm1231 - Fixed null condition error when adding as a new device. 
 // 2015-11-24 - erocm1231 - Added refresh command. Made a few changes to how the handler maps colors to the LEDs. Fixed 
 //              the device not having its on/off status updated when colors are changed.
@@ -103,11 +104,11 @@ metadata {
 	}  // end tiles
     
 	preferences {
-    	input "OnTime",  "number", title: "No Motion Interval", description: "N minutes lights stay on after no motion detected [0, 1-127]", defaultValue: 10, displayDuringSetup: true, required: false
-        input "OnLevel", "number", title: "Dimmer Onlevel", description: "Dimmer OnLevel for associated node 2 lights [0, 1-99, -1]", defaultValue: -1, displayDuringSetup: true, required: false
-        input "LiteMin", "number", title: "Luminance Report Frequency", description: "Luminance report sent every N minutes", defaultValue: 60, displayDuringSetup: true, required: false
-        input "TempMin", "number", title: "Temperature Report Frequency", description: "Temperature report sent every N minutes", defaultValue: 60, displayDuringSetup: true, required: false
-        input "TempAdj", "number", title: "Temperature Calibration", description: "Adjust temperature up/down N tenths of a degree F [(-127)-(+128)]", defaultValue: 0, displayDuringSetup: true, required: false
+    		input "OnTime",  "number", title: "No Motion Interval", description: "N minutes lights stay on after no motion detected [0, 1-127]", range: "0..127", defaultValue: 10, displayDuringSetup: true, required: false
+    		input "OnLevel", "number", title: "Dimmer Onlevel", description: "Dimmer OnLevel for associated node 2 lights [-1, 0, 1-99]", range: "-1..99", defaultValue: -1, displayDuringSetup: true, required: false
+    		input "LiteMin", "number", title: "Luminance Report Frequency", description: "Luminance report sent every N minutes [0-127]", range: "0..127", defaultValue: 10, displayDuringSetup: true, required: false
+    		input "TempMin", "number", title: "Temperature Report Frequency", description: "Temperature report sent every N minutes [0-127]", range: "0..127", defaultValue: 10, displayDuringSetup: true, required: false
+	 	input "TempAdj", "number", title: "Temperature Calibration", description: "Adjust temperature up/down N tenths of a degree F [(-127)-(+128)]", range: "-127..128", defaultValue: 0, displayDuringSetup: true, required: false
   }
 
 } // end metadata
