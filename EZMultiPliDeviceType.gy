@@ -3,6 +3,8 @@
 // driver for SmartThings
 // The EZMultiPli is also known as the HSM200 from HomeSeer.com
 //
+// 2016-01-28 - erocm1231 - Changed the configuration method to use scaledConfiguration so that it properly formatted negative numbers.
+//              Also, added configurationGet and a configurationReport method so that config values can be verified.
 // 2015-12-04 - erocm1231 - added range value to preferences as suggested by @Dela-Rick.
 // 2015-11-26 - erocm1231 - Fixed null condition error when adding as a new device. 
 // 2015-11-24 - erocm1231 - Added refresh command. Made a few changes to how the handler maps colors to the LEDs. Fixed 
@@ -50,7 +52,7 @@ metadata {
     
     tiles (scale: 2){      
 		multiAttributeTile(name:"switch", type: "lighting", width: 6, height: 4, canChangeIcon: true){
-			tileAttribute ("device.switch", key: "PRIMARY_CONTROL") {
+			tileAttribute ("device.switch", key: "PRIMARY_CONTROL", icon: "st.Lighting.light18") {
 				attributeState "on", label:'${name}', action:"switch.off", icon:"st.switches.light.on", backgroundColor:"#79b821", nextState:"turningOff"
 				attributeState "off", label:'${name}', action:"switch.on", icon:"st.switches.light.off", backgroundColor:"#ffffff", nextState:"turningOn"
 				attributeState "turningOn", label:'${name}', icon:"st.switches.light.on", backgroundColor:"#79b821"
@@ -104,11 +106,11 @@ metadata {
 	}  // end tiles
     
 	preferences {
-    		input "OnTime",  "number", title: "No Motion Interval", description: "N minutes lights stay on after no motion detected [0, 1-127]", range: "0..127", defaultValue: 10, displayDuringSetup: true, required: false
-    		input "OnLevel", "number", title: "Dimmer Onlevel", description: "Dimmer OnLevel for associated node 2 lights [-1, 0, 1-99]", range: "-1..99", defaultValue: -1, displayDuringSetup: true, required: false
-    		input "LiteMin", "number", title: "Luminance Report Frequency", description: "Luminance report sent every N minutes [0-127]", range: "0..127", defaultValue: 10, displayDuringSetup: true, required: false
-    		input "TempMin", "number", title: "Temperature Report Frequency", description: "Temperature report sent every N minutes [0-127]", range: "0..127", defaultValue: 10, displayDuringSetup: true, required: false
-	 	input "TempAdj", "number", title: "Temperature Calibration", description: "Adjust temperature up/down N tenths of a degree F [(-127)-(+128)]", range: "-127..128", defaultValue: 0, displayDuringSetup: true, required: false
+       input "OnTime",  "number", title: "No Motion Interval", description: "N minutes lights stay on after no motion detected [0, 1-127]", range: "0..127", defaultValue: 10, displayDuringSetup: true, required: false
+       input "OnLevel", "number", title: "Dimmer Onlevel", description: "Dimmer OnLevel for associated node 2 lights [-1, 0, 1-99]", range: "-1..99", defaultValue: -1, displayDuringSetup: true, required: false
+       input "LiteMin", "number", title: "Luminance Report Frequency", description: "Luminance report sent every N minutes [0-127]", range: "0..127", defaultValue: 10, displayDuringSetup: true, required: false
+       input "TempMin", "number", title: "Temperature Report Frequency", description: "Temperature report sent every N minutes [0-127]", range: "0..127", defaultValue: 10, displayDuringSetup: true, required: false
+       input "TempAdj", "number", title: "Temperature Calibration", description: "Adjust temperature up/down N tenths of a degree F [(-127)-(+128)]", range: "-127..128", defaultValue: 0, displayDuringSetup: true, required: false
   }
 
 } // end metadata
@@ -129,7 +131,7 @@ def parse(String description){
     	sendEvent("name":"statusText", "value":statusTextmsg, displayed:false)
    		 //log.debug statusTextmsg
 	}
-	log.debug "Parse returned ${result}"
+    if (result != [null]) log.debug "Parse returned ${result}"
     
     
 	return result
@@ -157,6 +159,9 @@ def zwaveEvent(physicalgraph.zwave.commands.sensormultilevelv5.SensorMultilevelR
 	return map
 }
 
+def zwaveEvent(physicalgraph.zwave.commands.configurationv2.ConfigurationReport cmd) {
+    log.debug "${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd.configurationValue}'"
+}
 
 def zwaveEvent(physicalgraph.zwave.commands.notificationv3.NotificationReport cmd) {
 	def map = [:]
@@ -342,15 +347,20 @@ def refresh() {
 }
 
 def configure() {
-	log.debug "OnTime=${settings.OnTime} OnLevel=${settings.OnLevel}"
+	log.debug "OnTime=${settings.OnTime} OnLevel=${settings.OnLevel} TempAdj=${settings.TempAdj}"
 	def cmd = delayBetween([
-		zwave.configurationV1.configurationSet(parameterNumber: 1, size: 1, configurationValue: [checkOnTimeInput(settings.OnTime)]).format(),
-		zwave.configurationV1.configurationSet(parameterNumber: 2, size: 1, configurationValue: [checkOnLevelInput(settings.OnLevel)]).format(),
-		zwave.configurationV1.configurationSet(parameterNumber: 3, size: 1, configurationValue: [checkLiteTempInput(settings.LiteMin)]).format(),
-		zwave.configurationV1.configurationSet(parameterNumber: 4, size: 1, configurationValue: [checkLiteTempInput(settings.TempMin)]).format(),
-		zwave.configurationV1.configurationSet(parameterNumber: 5, size: 1, configurationValue: [checkTempAdjInput(settings.TempAdj)]).format()
+		zwave.configurationV1.configurationSet(parameterNumber: 1, size: 1, scaledConfigurationValue: checkOnTimeInput(settings.OnTime)).format(),
+		zwave.configurationV1.configurationSet(parameterNumber: 2, size: 1, scaledConfigurationValue: checkOnLevelInput(settings.OnLevel)).format(),
+		zwave.configurationV1.configurationSet(parameterNumber: 3, size: 1, scaledConfigurationValue: checkLiteTempInput(settings.LiteMin)).format(),
+		zwave.configurationV1.configurationSet(parameterNumber: 4, size: 1, scaledConfigurationValue: checkLiteTempInput(settings.TempMin)).format(),
+		zwave.configurationV1.configurationSet(parameterNumber: 5, size: 1, scaledConfigurationValue: checkTempAdjInput(settings.TempAdj)).format(),
+		zwave.configurationV1.configurationGet(parameterNumber: 1).format(),
+		zwave.configurationV1.configurationGet(parameterNumber: 2).format(),
+		zwave.configurationV1.configurationGet(parameterNumber: 3).format(),
+		zwave.configurationV1.configurationGet(parameterNumber: 4).format(),
+		zwave.configurationV1.configurationGet(parameterNumber: 5).format()
 	], 100)
-	log.debug cmd
+	//log.debug cmd
 	cmd
 }
 
