@@ -77,7 +77,7 @@ metadata {
 			state "inactive", label:'no motion', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff"
 		}
 		valueTile("temperature", "device.temperature", width: 2, height: 2) {
-			state "temperature", label:'${currentValue}Â°', unit:"F", icon:"", // would be better if the units would switch to the desired units of the system (imperial or metric)
+			state "temperature", label:'${currentValue}°', unit:"F", icon:"", // would be better if the units would switch to the desired units of the system (imperial or metric)
 			backgroundColors:[
 				[value: 0,  color: "#1010ff"], // blue=cold
 				[value: 65, color: "#a0a0f0"],
