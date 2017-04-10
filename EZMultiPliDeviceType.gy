@@ -145,7 +145,7 @@ def parse(String description){
     
     def statusTextmsg = ""
     if (device.currentState('temperature') != null && device.currentState('illuminance') != null) {
-		statusTextmsg = "${device.currentState('temperature').value} Â°F - ${device.currentState('illuminance').value} ${(lum == "" || lum == null || lum == 1) ? "%" : "LUX"}"
+		statusTextmsg = "${device.currentState('temperature').value} ° - ${device.currentState('illuminance').value} ${(lum == "" || lum == null || lum == 1) ? "%" : "LUX"}"
     	sendEvent("name":"statusText", "value":statusTextmsg, displayed:false)
 	}
     if (result != [null] && result != []) log.debug "Parse returned ${result}"
