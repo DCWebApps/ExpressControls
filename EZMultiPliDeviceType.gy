@@ -3,6 +3,8 @@
 // driver for SmartThings
 // The EZMultiPli is also known as the HSM200 from HomeSeer.com
 //
+// 2017-04-10 - DrZwave (with help from Don Kirker) - changed fingerprint to the new format, lowered the OnTime 
+//              and other parameters to be "more in line with ST user expectations", get the luminance in LUX so it reports in lux all the time.
 // 2016-10-06 - erocm1231 - Added "updated" method to run when configuration options are changed. Depending on model of unit, luminance is being
 //              reported as a relative percentace or as a lux value. Added the option to configure this in the handler.
 // 2016-01-28 - erocm1231 - Changed the configuration method to use scaledConfiguration so that it properly formatted negative numbers.
@@ -24,6 +26,8 @@
 
 metadata {
 	definition (name: "EZmultiPli", namespace: "DrZWave", author: "Eric Ryherd", oauth: true) {
+	capability "Actuator"
+	capability "Sensor"
 	capability "Motion Sensor"
 	capability "Temperature Measurement"
 	capability "Illuminance Measurement"
@@ -32,8 +36,7 @@ metadata {
 	capability "Configuration"
     capability "Refresh"
 
-	fingerprint deviceId: "0x0701", inClusters: "0x5E, 0x71, 0x31, 0x33, 0x72, 0x86, 0x59, 0x85, 0x70, 0x77, 0x5A, 0x7A, 0x73, 0xEF, 0x20" 
-    
+	fingerprint mfr: "001E", prod: "0004", model: "0001" // new format for Fingerprint which is unique for every certified Z-Wave product
 	} // end definition
 
 	simulator {
@@ -74,7 +77,7 @@ metadata {
 			state "inactive", label:'no motion', icon:"st.motion.motion.inactive", backgroundColor:"#ffffff"
 		}
 		valueTile("temperature", "device.temperature", width: 2, height: 2) {
-			state "temperature", label:'${currentValue}°', unit:"F", icon:"", // would be better if the units would switch to the desired units of the system (imperial or metric)
+			state "temperature", label:'${currentValue}Â°', unit:"F", icon:"", // would be better if the units would switch to the desired units of the system (imperial or metric)
 			backgroundColors:[
 				[value: 0,  color: "#1010ff"], // blue=cold
 				[value: 65, color: "#a0a0f0"],
@@ -116,12 +119,12 @@ metadata {
 	}  // end tiles
     
 	preferences {
-       input "OnTime",  "number", title: "No Motion Interval", description: "N minutes lights stay on after no motion detected [0, 1-127]", range: "0..127", defaultValue: 10, displayDuringSetup: true, required: false
+       input "OnTime",  "number", title: "No Motion Interval", description: "N minutes lights stay on after no motion detected [0, 1-127]", range: "0..127", defaultValue: 2, displayDuringSetup: true, required: false
        input "OnLevel", "number", title: "Dimmer Onlevel", description: "Dimmer OnLevel for associated node 2 lights [-1, 0, 1-99]", range: "-1..99", defaultValue: -1, displayDuringSetup: true, required: false
-       input "LiteMin", "number", title: "Luminance Report Frequency", description: "Luminance report sent every N minutes [0-127]", range: "0..127", defaultValue: 10, displayDuringSetup: true, required: false
-       input "TempMin", "number", title: "Temperature Report Frequency", description: "Temperature report sent every N minutes [0-127]", range: "0..127", defaultValue: 10, displayDuringSetup: true, required: false
+       input "LiteMin", "number", title: "Luminance Report Frequency", description: "Luminance report sent every N minutes [0-127]", range: "0..127", defaultValue: 6, displayDuringSetup: true, required: false
+       input "TempMin", "number", title: "Temperature Report Frequency", description: "Temperature report sent every N minutes [0-127]", range: "0..127", defaultValue: 6, displayDuringSetup: true, required: false
        input "TempAdj", "number", title: "Temperature Calibration", description: "Adjust temperature up/down N tenths of a degree F [(-127)-(+128)]", range: "-127..128", defaultValue: 0, displayDuringSetup: true, required: false
-       input("lum", "enum", title:"Illuminance Measurement", description: "Percent or Lux", defaultValue: 1 ,required: false, displayDuringSetup: true, options:
+       input("lum", "enum", title:"Illuminance Measurement", description: "Percent or Lux", defaultValue: 2 ,required: false, displayDuringSetup: true, options:
           [1:"Percent",
            2:"Lux"])
   }
@@ -135,15 +138,17 @@ def parse(String description){
 	def result = []
 	def cmd = zwave.parse(description, [0x31: 5]) // 0x31=SensorMultilevel which we force to be version 5
 	if (cmd) {
-		result << createEvent(zwaveEvent(cmd))
+		def cmdData = zwaveEvent(cmd)
+		if (cmdData != [:])
+			result << createEvent(cmdData)
 	}
     
     def statusTextmsg = ""
     if (device.currentState('temperature') != null && device.currentState('illuminance') != null) {
-		statusTextmsg = "${device.currentState('temperature').value} °F - ${device.currentState('illuminance').value} ${(lum == "" || lum == null || lum == 1) ? "%" : "LUX"}"
+		statusTextmsg = "${device.currentState('temperature').value} Â°F - ${device.currentState('illuminance').value} ${(lum == "" || lum == null || lum == 1) ? "%" : "LUX"}"
     	sendEvent("name":"statusText", "value":statusTextmsg, displayed:false)
 	}
-    if (result != [null]) log.debug "Parse returned ${result}"
+    if (result != [null] && result != []) log.debug "Parse returned ${result}"
     
     
 	return result
@@ -198,6 +203,9 @@ def zwaveEvent(physicalgraph.zwave.commands.notificationv3.NotificationReport cm
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.basicv1.BasicReport cmd) {
+    if (cmd.value == 0 && device.latestState("color").value != "#ffffff") {
+        sendEvent(name: "color", value: "#ffffff", displayed: true)
+    }
     [name: "switch", value: cmd.value ? "on" : "off", type: "digital"]
 }
 
@@ -382,7 +390,7 @@ def configure() {
 		zwave.configurationV1.configurationGet(parameterNumber: 5).format()
 	], 100)
 	//log.debug cmd
-	cmd
+	cmd + refresh()
 }
 
 def huesatToRGB(float hue, float sat) {
@@ -416,3 +424,4 @@ private hex(value, width=2) {
 	}
 	s
 }
+
